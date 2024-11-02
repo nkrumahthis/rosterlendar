@@ -1,8 +1,10 @@
 "use client"
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import React from "react";
 
@@ -11,6 +13,7 @@ export default function Home() {
   const [loading, setLoading] = React.useState<boolean>(false)
   const [calendarLink, setCalendarLink] = React.useState<string | null>(null)
   const [staffName, setStaffName] = React.useState<string>('')
+  const [errorMessage, setErrorMessage] = React.useState<string>('')
 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,12 +23,63 @@ export default function Home() {
   }
 
   const processRota = async () => {
-    if(!image || !staffName.trim()) {
+    if (!image || !staffName.trim()) {
+      setErrorMessage("Please provide both staff name and an image.")
       return;
     }
 
     setLoading(true)
-    setCalendarLink("")
+    setErrorMessage('')
+
+    try {
+      const base64Image = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(image);
+      })
+
+      const response = await fetch(`/api/rota`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ base64Image, staffName }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to process rota");
+      }
+
+      const data = await response.json()
+
+      if (data.error) {
+        setErrorMessage(data.error)
+        return;
+      }
+
+      const icsResponse = await fetch('/api/calendar', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ shifts: data.shifts, staffName: staffName }),
+      })
+
+      if (!icsResponse.ok) {
+        throw new Error("Failed to generate ICS file");
+      }
+
+      const { downloadUrl } = await icsResponse.json();
+      setCalendarLink(downloadUrl)
+
+    } catch (error) {
+      console.error('Error processing rota:', error)
+      setErrorMessage("Error processing rota. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,19 +91,28 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Input
-                type="text"
-                accept="text"
-                placeholder="Enter your name here"
-                className="w-full"
-                value={staffName}
-                onChange={(e) => setStaffName(e.target.value)}
-              />
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="staffName">Staff Name</Label>
+                <Input
+                  id="staffName"
+                  name="staffName"
+                  required
+                  type="text"
+                  accept="text"
+                  placeholder="Enter your staff name here"
+                  className="w-full"
+                  value={staffName}
+                  onChange={(e) => setStaffName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="staffName">Rota Image</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+              </div>
               <Button
                 onClick={processRota}
                 disabled={!image || loading}
@@ -66,6 +129,12 @@ export default function Home() {
                 >
                   Download Calendar File
                 </Button>
+              )}
+
+              {errorMessage && (
+                <Alert variant="destructive">
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
               )}
             </div>
           </CardContent>
