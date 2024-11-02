@@ -13,7 +13,6 @@ import React from "react";
 export default function Home() {
   const [image, setImage] = React.useState<File | null>(null)
   const [loading, setLoading] = React.useState<boolean>(false)
-  const [calendarLink, setCalendarLink] = React.useState<string | null>(null)
   const [staffName, setStaffName] = React.useState<string>('')
   const [errorMessage, setErrorMessage] = React.useState<string>('')
   const [schedule, setSchedule] = React.useState<StaffSchedule | null>(null)
@@ -23,23 +22,6 @@ export default function Home() {
     if (e.target.files && e.target.files[0]) {
       setImage(e.target.files[0])
     }
-  }
-
-  const createIcs = async (data) => {
-    const icsResponse = await fetch('/api/calendar', {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ shifts: data.shifts, staffName: staffName }),
-    })
-
-    if (!icsResponse.ok) {
-      throw new Error("Failed to generate ICS file");
-    }
-
-    const { downloadUrl } = await icsResponse.json();
-    setCalendarLink(downloadUrl)
   }
 
   const processRota = async () => {
@@ -124,16 +106,6 @@ export default function Home() {
               </Button>
 
               {schedule && (<ScheduleTable schedule={schedule} />)}
-
-              {calendarLink && (
-                <Button
-                  onClick={() => window.open(calendarLink)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Download Calendar File
-                </Button>
-              )}
 
               {errorMessage && (
                 <Alert variant="destructive">
