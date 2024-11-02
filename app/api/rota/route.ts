@@ -1,3 +1,4 @@
+import { StaffSchedule } from "@/lib/types";
 import OpenAI from "openai";
 
 export async function POST(req: Request) {
@@ -9,20 +10,20 @@ export async function POST(req: Request) {
 		const { base64Image, staffName } = await req.json();
 
 		const systemPrompt = `You are a helpful schedule assistant. Your task is to:
-1. Look at the rota chart image and describe briefly what you see.
+1. Look at the schedule table image and describe what you see.
 2. Check if you can find a row with the name "${staffName}"
 3. If found, list their shift pattern where:
    M = Morning shift (08:00-14:00)
    A/D = Afternoon shift (14:00-20:00)
    N = Night shift (20:00-08:00)
    X = Off duty
-4. Respond ONLY with the SHIFT_DATA format if found
+4. Respond ONLY with the SHIFT_DATA format if found. Always give the full schedule with every shift you see.
 5. If you cannot find the name written "${staffName}" in the image, respond only with "NOTFOUND"
 
 SHIFT_DATA format example:
 {
     "month": "September",
-    "staff_member": "${staffName}",
+    "staffMember": "${staffName}",
     "shifts": [
         {
             "date": "2024-09-01",
@@ -63,7 +64,10 @@ SHIFT_DATA format example:
 
         console.log("responseContent", responseContent)
 
-		const shiftJson = JSON.parse(responseContent);
+        if(responseContent === "NOTFOUND"){
+            return Response.json({ data: null, status: 500 });
+        }
+		const shiftJson: StaffSchedule = JSON.parse(responseContent);
 
 		return Response.json({ data: shiftJson });
 	} catch (error) {

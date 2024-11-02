@@ -1,10 +1,12 @@
 "use client"
 
+import { ScheduleTable } from "@/components/ScheduleTable";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StaffSchedule } from "@/lib/types";
 import Image from "next/image";
 import React from "react";
 
@@ -14,12 +16,30 @@ export default function Home() {
   const [calendarLink, setCalendarLink] = React.useState<string | null>(null)
   const [staffName, setStaffName] = React.useState<string>('')
   const [errorMessage, setErrorMessage] = React.useState<string>('')
+  const [schedule, setSchedule] = React.useState<StaffSchedule | null>(null)
 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setImage(e.target.files[0])
     }
+  }
+
+  const createIcs = async (data) => {
+    const icsResponse = await fetch('/api/calendar', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ shifts: data.shifts, staffName: staffName }),
+    })
+
+    if (!icsResponse.ok) {
+      throw new Error("Failed to generate ICS file");
+    }
+
+    const { downloadUrl } = await icsResponse.json();
+    setCalendarLink(downloadUrl)
   }
 
   const processRota = async () => {
@@ -52,27 +72,9 @@ export default function Home() {
         throw new Error("Failed to process rota");
       }
 
-      const data = await response.json()
+      const { data } = await response.json() as { data: StaffSchedule }
 
-      if (data.error) {
-        setErrorMessage(data.error)
-        return;
-      }
-
-      const icsResponse = await fetch('/api/calendar', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ shifts: data.shifts, staffName: staffName }),
-      })
-
-      if (!icsResponse.ok) {
-        throw new Error("Failed to generate ICS file");
-      }
-
-      const { downloadUrl } = await icsResponse.json();
-      setCalendarLink(downloadUrl)
+      setSchedule(data)
 
     } catch (error) {
       console.error('Error processing rota:', error)
@@ -120,6 +122,8 @@ export default function Home() {
               >
                 {loading ? 'Processing...' : 'Convert Rota to Calendar'}
               </Button>
+
+              {schedule && (<ScheduleTable schedule={schedule} />)}
 
               {calendarLink && (
                 <Button
