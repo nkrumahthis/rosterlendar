@@ -69,9 +69,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <main className="max-w-md mx-auto">
+        <h1>RosterLendar</h1>
         <Card>
           <CardHeader>
-            <CardTitle>Rota to Calendar Converter</CardTitle>
+            <CardTitle>Duty Roster to Calendar Converter</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -134,7 +135,7 @@ export default function Home() {
         </a>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://github.com/nkrumahthis/rotalendar"
+          href="https://github.com/nkrumahthis/rosterlendar"
           target="_blank"
           rel="noopener noreferrer"
         >
